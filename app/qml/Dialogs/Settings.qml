@@ -419,11 +419,11 @@ Window {
           icon.source: "qrc:/rcc/icons/buttons/refresh.svg"
           icon.color: Cpp_ThemeManager.colors["button_text"]
           onClicked: {
-            Cpp_ThemeManager.theme = 0
-            Cpp_UI_Dashboard.points = 100
-            Cpp_UI_Dashboard.precision = 2
+            Cpp_ThemeManager.theme = 2
+            Cpp_UI_Dashboard.points = 500
+            Cpp_UI_Dashboard.precision = 3
             Cpp_Plugins_Bridge.enabled = false
-            mainWindow.automaticUpdates  = true
+            mainWindow.automaticUpdates  = false
             Cpp_UI_Dashboard.terminalEnabled = false
             Cpp_Misc_ModuleManager.softwareRendering = false
           }
