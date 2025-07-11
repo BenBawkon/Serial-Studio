@@ -10,7 +10,7 @@ of the GPL, provided that all derivative works also remain open source.
 
 This software has been modified by Aero Embedded Technologies, Inc.
 for use with Aero Data Acquisition UI.  The source code is available at
-https://calcium.aeroembedded.com/pydio/public/a8972df1b3a1cdda
+https://github.com/Aero-Embedded-Technologies/Serial-Studio
 
 → Full license: https://www.gnu.org/licenses/gpl-3.0.html
 → Source code: https://github.com/serial-studio/serial-studio
