@@ -1403,7 +1403,7 @@ void UI::Dashboard::configureMultiLineSeries()
     {
       series.y.push_back(PlotDataY());
       series.y.back().resize(points() + 1);
-      SIMD::fill(series.y.back().data(), points() + 1, 0);
+      SIMD::fill(series.y.back().data(), points() + 1, NAN);
     }
 
     m_multipltValues.append(series);
