@@ -254,10 +254,10 @@ void Widgets::MultiPlot::calculateAutoScaleRange()
   const auto prevMinY = m_minY;
   const auto prevMaxY = m_maxY;
 
-  // If the data is empty, set the range to 0-1
+  // If the data is empty, set the range to -1 to 1
   if (m_data.isEmpty())
   {
-    m_minY = 0;
+    m_minY = -1;
     m_maxY = 1;
   }
 
@@ -302,7 +302,7 @@ void Widgets::MultiPlot::calculateAutoScaleRange()
                     }));
     }
 
-    // If the min and max are the same, set the range to 0-1
+    // If the min and max are the same, set the range to -1 to 1
     if (qFuzzyCompare(m_minY, m_maxY))
     {
       if (qFuzzyIsNull(m_minY))
@@ -313,9 +313,9 @@ void Widgets::MultiPlot::calculateAutoScaleRange()
 
       else
       {
-        double absValue = qAbs(m_minY);
-        m_minY = m_minY - absValue * 0.1;
-        m_maxY = m_maxY + absValue * 0.1;
+        double rngValue = m_maxY - m_minY;
+        m_minY = m_minY - rngValue * 0.05
+        m_maxY = m_maxY + rngValue * 0.05;
       }
     }
 
@@ -328,13 +328,13 @@ void Widgets::MultiPlot::calculateAutoScaleRange()
     }
 
     // Round to integer numbers
-    m_maxY = std::ceil(m_maxY);
-    m_minY = std::floor(m_minY);
-    if (qFuzzyCompare(m_maxY, m_minY))
-    {
-      m_minY -= 1;
-      m_maxY += 1;
-    }
+    //m_maxY = std::ceil(m_maxY);
+    //m_minY = std::floor(m_minY);
+    //if (qFuzzyCompare(m_maxY, m_minY))
+    //{
+      //m_minY -= 1;
+      //m_maxY += 1;
+    //}
   }
 
   // Update user interface if required
