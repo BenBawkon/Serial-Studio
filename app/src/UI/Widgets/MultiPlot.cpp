@@ -407,8 +407,8 @@ void Widgets::MultiPlot::calculateAutoScaleRange()
       if (qFuzzyIsNull(paddedRange))
         paddedRange = 1;
 
-      if (paddedRange < 0.25)
-        paddedRange = 0.25;
+      if (paddedRange < 0.125)
+        paddedRange = 0.125;
 
       ////m_minY = std::floor(midY - paddedRange);
       ////m_maxY = std::ceil(midY + paddedRange);
