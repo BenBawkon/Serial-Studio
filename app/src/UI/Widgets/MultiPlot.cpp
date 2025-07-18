@@ -403,12 +403,17 @@ void Widgets::MultiPlot::calculateAutoScaleRange()
       const double halfRange = (m_maxY - m_minY) / 2.0;
 
       // Expand range symmetrically around midY, with a 10% padding
-      double paddedRange = halfRange * 1.1;
+      double paddedRange = halfRange * 1.05;
       if (qFuzzyIsNull(paddedRange))
         paddedRange = 1;
 
-      m_minY = std::floor(midY - paddedRange);
-      m_maxY = std::ceil(midY + paddedRange);
+      if (paddedRange < 0.25)
+        paddedRange = 0.25;
+
+      ////m_minY = std::floor(midY - paddedRange);
+      ////m_maxY = std::ceil(midY + paddedRange);
+      m_minY = (midY - paddedRange);
+      m_maxY = (midY + paddedRange);
 
       // Safety check to avoid zero-range
       if (qFuzzyCompare(m_minY, m_maxY))

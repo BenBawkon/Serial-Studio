@@ -1377,17 +1377,11 @@ void UI::Dashboard::configureMultiLineSeries()
     series.x = &m_multipltXAxis;
     for (int j = 0; j < group.datasetCount(); ++j)
     {
-<<<<<<< HEAD
-      series.y.push_back(PlotDataY());
-      series.y.back().resize(points() + 1);
-      SIMD::fill(series.y.back().data(), points() + 1, NAN);
-=======
       series.y.push_back(PlotDataY(points() + 1));
-      series.y.back().fill(0);
->>>>>>> badaec7c83ca55ad6d82bbaa93102a345a991ac9
+      series.y.back().fill(NAN);
     }
 
-    m_multipltValues.append(series);
+    m_multipltValues.append(series);;
   }
 }
 
