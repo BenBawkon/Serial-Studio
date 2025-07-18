@@ -50,7 +50,6 @@ Item {
   property bool running: true
   property bool interpolate: true
   property bool showLegends: true
-  property var seriesVisible: Array(root.model.count).fill(true)
 
   //
   // Save settings
@@ -82,17 +81,26 @@ Item {
     function onTimeout24Hz() {
       if (root.visible && root.running) {
         root.model.updateData()
-        root.model.calculateAutoScaleRange()
 
         const count = plot.graph.seriesList.length
         for (let i = 0; i < count; ++i) {
           let ptr = plot.graph.seriesList[i]
-          if (ptr.visible && root.seriesVisible[ptr.curveIndex])
+          if (ptr.visible)
             root.model.draw(ptr, ptr.curveIndex)
           else
             ptr.clear()
         }
       }
+    }
+  }
+
+  //
+  // Re-draw whole plot when curves changes
+  //
+  Connections {
+    target: root.model
+
+    function onCurvesChanged() {
     }
   }
 
@@ -255,9 +263,9 @@ Item {
       Instantiator {
         model: root.model.count
         delegate: LineSeries {
-          visible: root.interpolate
           property int curveIndex: index
           Component.onCompleted: plot.graph.addSeries(this)
+          visible: root.interpolate && root.model.visibleCurves[index]
         }
       }
 
@@ -267,9 +275,9 @@ Item {
       Instantiator {
         model: root.model.count
         delegate: ScatterSeries {
-          visible: !root.interpolate
           property int curveIndex: index
           Component.onCompleted: plot.graph.addSeries(this)
+          visible: !root.interpolate && root.model.visibleCurves[index]
           pointDelegate: Rectangle {
             width: 2
             height: 2
@@ -320,13 +328,13 @@ Item {
                 Layout.fillWidth: true
                 text: root.model.labels[index]
                 Layout.alignment: Qt.AlignVCenter
-                checked: root.seriesVisible[index]
+                checked: root.model.visibleCurves[index]
                 palette.highlight: root.model.colors[index]
                 font: Cpp_Misc_CommonFonts.customMonoFont(0.8)
                 palette.text: Cpp_ThemeManager.colors["widget_text"]
                 onCheckedChanged: {
-                  if (checked !== root.seriesVisible[index])
-                    root.seriesVisible[index] = checked
+                  if (checked !== root.model.visibleCurves[index])
+                    root.model.modifyCurveVisibility(index, checked)
                 }
               }
             }

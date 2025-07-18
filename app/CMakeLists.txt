@@ -193,6 +193,7 @@ set(HEADERS
   src/IO/HAL_Driver.h
   src/IO/Checksum.h
   src/IO/ConsoleExport.h
+  src/IO/FixedQueue.h
   src/IO/CircularBuffer.h
   src/IO/FileTransmission.h
   src/IO/FrameReader.h
@@ -205,7 +206,6 @@ set(HEADERS
   src/JSON/FrameBuilder.h
   src/CSV/Export.h
   src/CSV/Player.h
-  src/SIMD/SIMD.h
   src/AppInfo.h
   src/SerialStudio.h
 )
@@ -324,13 +324,15 @@ if(WIN32)
   set(WIN_RC "${CMAKE_CURRENT_SOURCE_DIR}/deploy/windows/info.rc")
   set(SOURCES ${SOURCES} ${WIN_RC} "src/Platform/NativeWindow_Windows.cpp")
 elseif(APPLE)
-  set(ICON_MACOSX "${CMAKE_CURRENT_SOURCE_DIR}/deploy/macOS/icon.icns")
   set(INFO_MACOSX "${CMAKE_CURRENT_SOURCE_DIR}/deploy/macOS/info.plist")
+  set(ICON_MACOSX "${CMAKE_CURRENT_SOURCE_DIR}/deploy/macOS/AppIcon.icns")
+  set(ASSETS_MACOSX "${CMAKE_CURRENT_SOURCE_DIR}/deploy/macOS/Assets.car")
   set_source_files_properties(
     ${ICON_MACOSX}
+    ${ASSETS_MACOSX}
     PROPERTIES MACOSX_PACKAGE_LOCATION "Resources"
   )
-set(SOURCES ${SOURCES} ${ICON_MACOSX} "src/Platform/NativeWindow_macOS.mm")
+set(SOURCES ${SOURCES} ${ICON_MACOSX} ${ASSETS_MACOSX} "src/Platform/NativeWindow_macOS.mm")
 set_source_files_properties(
   "src/Platform/NativeWindow_macOS.mm" PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
 )
@@ -365,7 +367,6 @@ target_link_libraries(
 
   ${QT_LIBS}
 
-  simde
   QCodeEditor
   QRealFourier
   QSimpleUpdater
@@ -409,7 +410,7 @@ elseif(UNIX)
   install(TARGETS ${PROJECT_EXECUTABLE} RUNTIME DESTINATION bin)
 
   install(
-    FILES ${CMAKE_CURRENT_SOURCE_DIR}/deploy/linux/serial-studio.png
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/deploy/linux/serial-studio.svg
     DESTINATION share/pixmaps
   )
 
@@ -459,7 +460,6 @@ install(SCRIPT ${deploy_script})
 #-------------------------------------------------------------------------------
 
 set(CPACK_PACKAGE_NAME                  ${PROJECT_DISPNAME})
-set(CPACK_PACKAGE_CONTACT               ${PROJECT_CONTACT})
 set(CPACK_PACKAGE_VENDOR                ${PROJECT_VENDOR})
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY   ${PROJECT_DESCRIPTION_SUMMARY})
 set(CPACK_PACKAGE_VERSION_MAJOR         ${PROJECT_VERSION_MAJOR})
@@ -468,6 +468,7 @@ set(CPACK_PACKAGE_VERSION_PATCH         ${PROJECT_VERSION_PATCH})
 set(CPACK_PACKAGE_DESCRIPTION_FILE      ${PROJECT_DESCRIPTION_FILE})
 set(CPACK_PACKAGE_FILE_NAME             ${PROJECT_FILE_NAME})
 set(CPACK_RESOURCE_FILE_LICENSE         ${PROJECT_FILE_LICENSE})
+set(CPACK_PACKAGE_HOMEPAGE_URL          ${PROJECT_CONTACT})
 
 set(CPACK_MONOLITHIC_INSTALL ON)
 
@@ -475,7 +476,7 @@ if(WIN32)
   set(CPACK_PACKAGE_ICON                "${CMAKE_CURRENT_SOURCE_DIR}\\\\deploy\\\\windows\\\\icon.ico")
   set(CPACK_PACKAGE_INSTALL_DIRECTORY   "${CPACK_PACKAGE_NAME}")
 else()
-  set(CPACK_PACKAGE_ICON                "${CMAKE_CURRENT_SOURCE_DIR}/deploy/icon.png")
+  set(CPACK_PACKAGE_ICON                "${CMAKE_CURRENT_SOURCE_DIR}/deploy/PackageIcon.png")
   set(CPACK_PACKAGE_INSTALL_DIRECTORY   "${CPACK_PACKAGE_NAME}")
 endif()
 

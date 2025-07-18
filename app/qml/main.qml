@@ -34,8 +34,7 @@ Item {
 
   //
   // Define application name
-  //
-  readonly property string appIcon: Cpp_CommercialBuild && Cpp_Licensing_LemonSqueezy.isActivated ? "qrc:/rcc/logo/icon-pro.png" : "qrc:/rcc/logo/icon.png"
+  // 
   readonly property bool proVersion: Cpp_CommercialBuild ? Cpp_Licensing_LemonSqueezy.isActivated || Cpp_Licensing_Trial.trialEnabled : false
 
   //
@@ -44,17 +43,6 @@ Item {
   function checkForUpdates() {
     Cpp_Updater.setNotifyOnFinish(Cpp_AppUpdaterUrl, true)
     Cpp_Updater.checkForUpdates(Cpp_AppUpdaterUrl)
-  }
-
-  //
-  // Ask the user to save the project file before closing the app
-  //
-  function handleClose(close) {
-    close.accepted = false
-    if (Cpp_JSON_ProjectModel.askSave()) {
-      close.accepted = true
-      Qt.quit();
-    }
   }
 
   //
@@ -76,10 +64,11 @@ Item {
   //
   MainWindow.MainWindow {
     id: mainWindow
-    onClosing: {
-      if (visible)
-        (close) => app.handleClose(close)
-    }
+    onClosing: (close) => {
+                 close.accepted = Cpp_JSON_ProjectModel.askSave()
+                 if (close.accepted)
+                 Qt.quit()
+               }
 
     Dialogs.Settings {
       id: settingsDialog
@@ -116,6 +105,10 @@ Item {
       id: fileTransmissionDialog
       source: "qrc:/serial-studio.com/gui/qml/Dialogs/FileTransmission.qml"
     }
+
+    ProjectEditor.ProjectEditor {
+      id: projectEditor
+    }
   }
 
   //
@@ -132,13 +125,6 @@ Item {
   DialogLoader {
     id: welcomeDialog
     source: "qrc:/serial-studio.com/gui/qml/Dialogs/Welcome.qml"
-  }
-
-  //
-  // Project Editor
-  //
-  ProjectEditor.ProjectEditor {
-    id: projectEditor
   }
 
   //

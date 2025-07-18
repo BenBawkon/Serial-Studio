@@ -39,10 +39,6 @@ Window {
   maximumWidth: column.implicitWidth + 32
   minimumHeight: column.implicitHeight + root.titlebarHeight + 32
   maximumHeight: column.implicitHeight + root.titlebarHeight + 32
-
-  //
-  // Make window stay on top
-  //
   Component.onCompleted: {
     root.flags = Qt.Dialog |
         Qt.WindowTitleHint |
@@ -169,14 +165,22 @@ Window {
           // Activation key image
           //
           Image {
+            sourceSize.width: 128
             Layout.minimumWidth: 128
             Layout.maximumWidth: 128
             Layout.minimumHeight: 128
             Layout.maximumHeight: 128
-            sourceSize: Qt.size(128, 128)
             Layout.alignment: Qt.AlignVCenter
+            source: "qrc:/rcc/icons/licensing/license.svg"
             visible: !Cpp_Licensing_LemonSqueezy.isActivated
-            source: Cpp_Misc_Utilities.hdpiImagePath("qrc:/rcc/logo/activation.png")
+          }
+
+          //
+          // Spacer
+          //
+          Item {
+            implicitWidth: 1
+            visible: !Cpp_Licensing_LemonSqueezy.isActivated
           }
 
           //

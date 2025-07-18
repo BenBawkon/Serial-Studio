@@ -19,7 +19,6 @@
  * SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-SerialStudio-Commercial
  */
 
-#include "SIMD/SIMD.h"
 #include "UI/Dashboard.h"
 #include "UI/Widgets/Plot.h"
 
@@ -159,9 +158,11 @@ void Widgets::Plot::draw(QXYSeries *series)
  */
 void Widgets::Plot::updateData()
 {
+  // Stop if widget is disabled
   if (!isEnabled())
     return;
 
+  // Only obtain data if widget data is still valid
   if (VALIDATE_WIDGET(SerialStudio::DashboardPlot, m_index))
   {
     // Get plotting data
@@ -174,9 +175,23 @@ void Widgets::Plot::updateData()
     if (m_data.size() != count)
       m_data.resize(count);
 
-    // Convert data to list of QPointF
+    // Obtain raw pointers
+    QPointF *out = m_data.data();
+    const auto *xData = X.raw();
+    const auto *yData = Y.raw();
+
+    // Get queue states for faster iteration
+    std::size_t xIdx = X.frontIndex();
+    std::size_t yIdx = Y.frontIndex();
+
+    // Update plot data points, avoid queue operations overhead
     for (qsizetype i = 0; i < count; ++i)
-      m_data[i] = QPointF(X[i], Y[i]);
+    {
+      out[i].setX(xData[xIdx]);
+      out[i].setY(yData[yIdx]);
+      xIdx = (xIdx + 1) % X.capacity();
+      yIdx = (yIdx + 1) % Y.capacity();
+    }
   }
 }
 
@@ -323,13 +338,16 @@ bool Widgets::Plot::computeMinMaxValues(double &min, double &max,
   // Set the min and max to the lowest and highest values
   if (!ok)
   {
-    // Initialize values to ensure that min/max are set
+    // Get minimum and maximum values from data
     min = std::numeric_limits<double>::max();
     max = std::numeric_limits<double>::lowest();
 
     // Loop through the plot data and update the min and max
-    min = SIMD::findMin(m_data, extractor);
-    max = SIMD::findMax(m_data, extractor);
+    for (auto i = 0; i < m_data.size(); ++i)
+    {
+      min = qMin(min, extractor(m_data[i]));
+      max = qMax(max, extractor(m_data[i]));
+    }
 
     // If min and max are the same, adjust the range
     if (qFuzzyCompare(min, max))

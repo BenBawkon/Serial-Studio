@@ -39,10 +39,6 @@ Window {
   maximumWidth: layout.implicitWidth
   minimumHeight: layout.implicitHeight
   maximumHeight: layout.implicitHeight
-
-  //
-  // Make window stay on top
-  //
   Component.onCompleted: {
     root.flags = Qt.Dialog |
         Qt.WindowTitleHint |
@@ -125,9 +121,8 @@ Window {
         Image {
           id: banner
           Layout.leftMargin: -1
-          sourceSize.width: 151
-          sourceSize.height: 312
-          source: "qrc:/rcc/images/dialog-banner.png"
+          sourceSize.width: 164
+          source: "qrc:/rcc/images/dialog-banner.svg"
         } Rectangle {
           implicitWidth: 1
           Layout.fillHeight: true
@@ -219,6 +214,7 @@ Window {
 
             Item {
               Layout.fillHeight: true
+              implicitHeight: 12
             }
 
             RowLayout {
@@ -243,6 +239,7 @@ Window {
 
             Item {
               Layout.fillHeight: true
+              implicitHeight: 12
             }
           }
 

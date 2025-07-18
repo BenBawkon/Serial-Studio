@@ -29,6 +29,7 @@
 
 #include "JSON/FrameParser.h"
 #include "JSON/ProjectModel.h"
+#include <QtGui/qshortcut.h>
 
 #include "Misc/Utilities.h"
 #include "Misc/CommonFonts.h"
@@ -495,7 +496,7 @@ void JSON::FrameParser::selectAll()
 void JSON::FrameParser::onThemeChanged()
 {
   static const auto *t = &Misc::ThemeManager::instance();
-  const auto name = t->themeData().value("code-editor-theme").toString();
+  const auto name = t->parameters().value("code-editor-theme").toString();
   const auto path = QString(":/rcc/themes/code-editor/%1.xml").arg(name);
 
   QFile file(path);
@@ -594,6 +595,7 @@ void JSON::FrameParser::mousePressEvent(QMouseEvent *event)
                         event->pointingDevice());
 
   DW_EXEC_EVENT(&m_widget, mousePressEvent, &eventCopy);
+  forceActiveFocus();
 }
 
 /**

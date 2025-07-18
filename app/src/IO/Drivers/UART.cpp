@@ -563,7 +563,7 @@ void IO::Drivers::UART::setPortIndex(const quint8 portIndex)
     m_portIndex = 0;
 
   // Save settings
-  const auto &name = portList().at(m_portIndex);
+  const auto name = portList().at(m_portIndex);
   if (!name.isEmpty() && m_portIndex > 0)
     m_settings.setValue("IO_Serial_SelectedDevice", name);
 
@@ -894,7 +894,7 @@ void IO::Drivers::UART::handleError(QSerialPort::SerialPortError error)
 void IO::Drivers::UART::onReadyRead()
 {
   if (isOpen())
-    processData(port()->readAll());
+    Q_EMIT dataReceived(port()->readAll());
 }
 
 /**

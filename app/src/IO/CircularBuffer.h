@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <mutex>
 #include <vector>
 #include <cstring>
 #include <QByteArray>
@@ -70,7 +69,7 @@ private:
   qsizetype m_capacity;
   std::vector<StorageType> m_buffer;
 
-  mutable std::mutex m_mutex;
+  // mutable std::mutex m_mutex;
 };
 } // namespace IO
 
@@ -107,7 +106,7 @@ IO::CircularBuffer<T, StorageType>::CircularBuffer(qsizetype capacity)
 template<typename T, typename StorageType>
 StorageType &IO::CircularBuffer<T, StorageType>::operator[](qsizetype index)
 {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  // std::lock_guard<std::mutex> lock(m_mutex);
 
   if (index < 0 || index >= m_size)
     throw std::out_of_range("Index out of range");
@@ -124,7 +123,7 @@ StorageType &IO::CircularBuffer<T, StorageType>::operator[](qsizetype index)
 template<typename T, typename StorageType>
 void IO::CircularBuffer<T, StorageType>::clear()
 {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  // std::lock_guard<std::mutex> lock(m_mutex);
   m_size = 0;
   m_head = 0;
   m_tail = 0;
@@ -143,7 +142,7 @@ template<typename T, typename StorageType>
 void IO::CircularBuffer<T, StorageType>::append(const T &data)
 {
   // Lock the mutex
-  std::lock_guard<std::mutex> lock(m_mutex);
+  // std::lock_guard<std::mutex> lock(m_mutex);
 
   // Obtain the length of the input data & a pointer to it
   const qsizetype dataSize = data.size();
@@ -224,23 +223,24 @@ qsizetype IO::CircularBuffer<T, StorageType>::freeSpace() const
 template<typename T, typename StorageType>
 T IO::CircularBuffer<T, StorageType>::read(qsizetype size)
 {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  // std::lock_guard<std::mutex> lock(m_mutex);
 
   if (size > m_size)
     throw std::underflow_error("Not enough data in buffer");
 
-  QByteArray result;
+  T result;
   result.resize(size);
 
-  for (qsizetype i = 0; i < size; ++i)
-  {
-    result[i] = m_buffer[m_head];
-    m_head = (m_head + 1) % m_capacity;
-  }
+  const qsizetype firstChunk = std::min(size, m_capacity - m_head);
+  std::memcpy(result.data(), &m_buffer[m_head], firstChunk);
 
+  if (size > firstChunk)
+    std::memcpy(result.data() + firstChunk, &m_buffer[0], size - firstChunk);
+
+  m_head = (m_head + size) % m_capacity;
   m_size -= size;
 
-  return result;
+  return std::move(result);
 }
 
 /**
@@ -258,7 +258,7 @@ T IO::CircularBuffer<T, StorageType>::read(qsizetype size)
 template<typename T, typename StorageType>
 T IO::CircularBuffer<T, StorageType>::peek(qsizetype size) const
 {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  // std::lock_guard<std::mutex> lock(m_mutex);
 
   size = std::min(size, m_size);
 
@@ -274,7 +274,8 @@ T IO::CircularBuffer<T, StorageType>::peek(qsizetype size) const
     std::memcpy(result.data() + firstChunk, &m_buffer[0], secondChunk);
   }
 
-  return result;
+  return std::move(result);
+  ;
 }
 
 /**
@@ -305,7 +306,7 @@ template<typename T, typename StorageType>
 int IO::CircularBuffer<T, StorageType>::findPatternKMP(const T &pattern,
                                                        const int pos)
 {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  // std::lock_guard<std::mutex> lock(m_mutex);
 
   // Validate search pattern
   if (pattern.isEmpty() || m_size < pattern.size())

@@ -19,7 +19,6 @@
  * SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-SerialStudio-Commercial
  */
 
-#include "SIMD/SIMD.h"
 #include "UI/Dashboard.h"
 #include "Misc/ThemeManager.h"
 #include "UI/Widgets/MultiPlot.h"
@@ -44,8 +43,14 @@ Widgets::MultiPlot::MultiPlot(const int index, QQuickItem *parent)
     const auto &group = GET_GROUP(SerialStudio::DashboardMultiPlot, m_index);
     m_minY = std::numeric_limits<double>::max();
     m_maxY = std::numeric_limits<double>::lowest();
-    for (const auto &dataset : group.datasets())
+
+    // Populate data from datasets
+    for (int i = 0; i < group.datasetCount(); ++i)
     {
+      const auto &dataset = group.datasets()[i];
+
+      m_drawOrders.append(i);
+      m_visibleCurves.append(true);
       m_labels.append(dataset.title());
       m_minY = qMin(m_minY, qMin(dataset.min(), dataset.max()));
       m_maxY = qMax(m_maxY, qMax(dataset.min(), dataset.max()));
@@ -165,15 +170,35 @@ const QStringList &Widgets::MultiPlot::labels() const
 }
 
 /**
+ * @brief Returns the visibility state of all curves.
+ *
+ * Provides a reference to the internal list indicating which curves are
+ * currently visible.
+ *
+ * @return Reference to a QList of booleans representing curve visibility.
+ */
+const QList<bool> &Widgets::MultiPlot::visibleCurves() const
+{
+  return m_visibleCurves;
+}
+
+/**
  * @brief Draws the data on the given QLineSeries.
  * @param series The QXYSeries to draw the data on.
  * @param index The index of the dataset to draw.
  */
 void Widgets::MultiPlot::draw(QXYSeries *series, const int index)
 {
-  if (series && index >= 0 && index < count())
+  if (series && index >= 0 && index < count() && m_visibleCurves[index])
   {
     series->replace(m_data[index]);
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+    const int drawOrder = m_drawOrders.indexOf(index);
+    if (series->drawOrder() != drawOrder)
+      series->setDrawOrder(drawOrder);
+#endif
+
     Q_EMIT series->update();
   }
 }
@@ -183,28 +208,66 @@ void Widgets::MultiPlot::draw(QXYSeries *series, const int index)
  */
 void Widgets::MultiPlot::updateData()
 {
+  // Stop if widget is disabled
   if (!isEnabled())
     return;
 
+  // Only obtain data if widget data is still valid
   if (VALIDATE_WIDGET(SerialStudio::DashboardMultiPlot, m_index))
   {
+    // Fetch multiplot source data (shared X axis, multiple Y series)
     const auto &data = UI::Dashboard::instance().multiplotData(m_index);
     const auto &X = *data.x;
 
-    const qsizetype xSize = X.size();
+    // Ensure output container has one QVector<QPointF> per series
     const qsizetype plotCount = data.y.size();
+    m_data.resize(plotCount);
+
+    // Get raw X pointer and state
+    const double *xData = X.raw();
+    std::size_t xIdx = X.frontIndex();
+    const std::size_t xCap = X.capacity();
+
+    // Populate data for each plot
     for (qsizetype i = 0; i < plotCount; ++i)
     {
-      const auto &series = data.y[i];
-      const qsizetype seriesSize = series.size();
+      // Skip if curve is not visible
+      if (!m_visibleCurves[i])
+        continue;
 
-      if (m_data[i].size() != seriesSize)
-        m_data[i].resize(seriesSize);
+      // Get raw pointer to dashboard data
+      const auto &Y = data.y[i];
+      const double *yData = Y.raw();
 
-      const qsizetype count = std::min(xSize, seriesSize);
+      // Get queue states for faster iteration
+      std::size_t yIdx = Y.frontIndex();
+      const std::size_t yCap = Y.capacity();
+
+      // Obtain the length of the shortest axis
+      const qsizetype count = std::min(X.size(), Y.size());
+
+      // Resize plot data if needed
+      QVector<QPointF> &outSeries = m_data[i];
+      if (outSeries.size() != count)
+        outSeries.resize(count);
+
+      // Keep local copies to avoid resetting each plot
+      std::size_t xi = xIdx;
+      std::size_t yi = yIdx;
+
+      // Update plot data points, avoid queue operations overhead
+      QPointF *dst = outSeries.data();
       for (qsizetype j = 0; j < count; ++j)
-        m_data[i][j] = QPointF(X[j], series[j]);
+      {
+        dst[j].setX(xData[xi]);
+        dst[j].setY(yData[yi]);
+        xi = (xi + 1) % xCap;
+        yi = (yi + 1) % yCap;
+      }
     }
+
+    // Calculate auto scale range
+    calculateAutoScaleRange();
   }
 }
 
@@ -227,6 +290,9 @@ void Widgets::MultiPlot::updateRange()
   // Clear the data
   m_data.clear();
   m_data.squeeze();
+
+  // Get data
+  auto data = UI::Dashboard::instance().multiplotData(m_index);
 
   // Get the multiplot group and loop through each dataset
   const auto &group = GET_GROUP(SerialStudio::DashboardMultiPlot, m_index);
@@ -269,17 +335,23 @@ void Widgets::MultiPlot::calculateAutoScaleRange()
     m_minY = std::numeric_limits<double>::max();
     m_maxY = std::numeric_limits<double>::lowest();
 
+    int index = 0;
     for (const auto &dataset : group.datasets())
     {
       ok &= !qFuzzyCompare(dataset.min(), dataset.max());
-      if (ok)
+      if (ok && m_visibleCurves[index])
       {
         m_minY = qMin(m_minY, qMin(dataset.min(), dataset.max()));
         m_maxY = qMax(m_maxY, qMax(dataset.min(), dataset.max()));
       }
 
       else
+      {
+        ok = false;
         break;
+      }
+
+      ++index;
     }
   }
 
@@ -291,15 +363,19 @@ void Widgets::MultiPlot::calculateAutoScaleRange()
     m_maxY = std::numeric_limits<double>::lowest();
 
     // Loop through each dataset and find the min and max values
-    for (const auto &dataset : std::as_const(m_data))
+    int index = 0;
+    for (const auto &curve : std::as_const(m_data))
     {
-      m_minY = qMin(m_minY, SIMD::findMin(dataset, [](const QPointF &p) {
-                      return p.y();
-                    }));
+      if (m_visibleCurves[index])
+      {
+        for (auto i = 0; i < curve.count(); ++i)
+        {
+          m_minY = qMin(m_minY, curve[i].y());
+          m_maxY = qMax(m_maxY, curve[i].y());
+        }
+      }
 
-      m_maxY = qMax(m_maxY, SIMD::findMax(dataset, [](const QPointF &p) {
-                      return p.y();
-                    }));
+      ++index;
     }
 
     // If the min and max are the same, set the range to -1 to 1
@@ -319,12 +395,27 @@ void Widgets::MultiPlot::calculateAutoScaleRange()
       }
     }
 
-    // If the min and max are not the same, set the range to 10% more
+    // Expand range symmetrically around midY, with a 10% padding
     else
     {
-      double range = m_maxY - m_minY;
-      m_minY -= range * 0.1;
-      m_maxY += range * 0.1;
+      // Calculate center and half-range
+      const double midY = (m_minY + m_maxY) / 2.0;
+      const double halfRange = (m_maxY - m_minY) / 2.0;
+
+      // Expand range symmetrically around midY, with a 10% padding
+      double paddedRange = halfRange * 1.1;
+      if (qFuzzyIsNull(paddedRange))
+        paddedRange = 1;
+
+      m_minY = std::floor(midY - paddedRange);
+      m_maxY = std::ceil(midY + paddedRange);
+
+      // Safety check to avoid zero-range
+      if (qFuzzyCompare(m_minY, m_maxY))
+      {
+        m_minY -= 1;
+        m_maxY += 1;
+      }
     }
 
     // Round to integer numbers
@@ -340,6 +431,32 @@ void Widgets::MultiPlot::calculateAutoScaleRange()
   // Update user interface if required
   if (qFuzzyCompare(prevMinY, m_minY) || qFuzzyCompare(prevMaxY, m_maxY))
     Q_EMIT rangeChanged();
+}
+
+/**
+ * @brief Modifies the visibility state of a specific curve in the multi-plot.
+ *
+ * Updates the visibility flag for the curve at the given index. If the index is
+ * valid, the internal visibility list is updated, the autoscale range is
+ * recalculated, and the curvesChanged() signal is emitted.
+ *
+ * @param index   Index of the curve to modify.
+ * @param visible True to show the curve, false to hide it.
+ */
+void Widgets::MultiPlot::modifyCurveVisibility(const int index,
+                                               const bool visible)
+{
+  if (index >= 0 && index < m_visibleCurves.count())
+  {
+    m_visibleCurves[index] = visible;
+    if (visible)
+    {
+      m_drawOrders.removeAll(index);
+      m_drawOrders.append(index);
+    }
+
+    Q_EMIT curvesChanged();
+  }
 }
 
 /**
@@ -369,5 +486,6 @@ void Widgets::MultiPlot::onThemeChanged()
     }
 
     Q_EMIT themeChanged();
+    Q_EMIT curvesChanged();
   }
 }
